@@ -166,8 +166,8 @@ validationPart = training[-inTrain,]</code></pre>
 <pre class="r"><code>library(randomForest)</code></pre>
 <pre><code>## randomForest 4.6-10
 ## Type rfNews() to see new features/changes/bug fixes.</code></pre>
-<pre class="r"><code># rfModel = train(classe~., method=&quot;rf&quot;, data=trainingPart)
-# saveRDS(rfModel, &quot;rfModel.RDS&quot;)
+<pre class="r"><code>rfModel = train(classe~., method=&quot;rf&quot;, data=trainingPart)
+saveRDS(rfModel, &quot;rfModel.RDS&quot;)
 rfModel = readRDS(&quot;rfModel.RDS&quot;)
 rfModel</code></pre>
 <pre><code>## Random Forest 
