@@ -61,18 +61,19 @@ predTrain <- predict(rfModel, trainingPart)
 confusionMatrix(predTrain, trainingPart[, "classe"])
 
 ## Check on Validation partition which was not used for training
-predValid <- predict(rfModel, trainingPart)
-confusionMatrix(predValid, trainingPart[, "classe"])
+predValid <- predict(rfModel, validationPart)
+confusionMatrix(predValid, validationPart[, "classe"])
 
 ## Predictions on course project testing set
 predTest <- predict(rfModel, testing)
-testing <- cbind(hatTrain , testing)
+testing <- cbind(predTest , testing)
+testing
 
-
-#```{r}
-#DTestCS <- predict(preProc, DTest[, predCandidates, with=FALSE])
-hatTrain <- predict(model, testing)
-testing <- cbind(hatTrain , testing)
-subset(DTest, select=names(DTest)[grep("belt|[^(fore)]arm|dumbbell|forearm", names(DTest), invert=TRUE)])
-```
-
+pml_write_files = function(x){
+    n = length(x)
+    for(i in 1:n){
+        filename = paste0("problem_id_",i,".txt")
+        write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+    }
+}
+pml_write_files(testing[,1])

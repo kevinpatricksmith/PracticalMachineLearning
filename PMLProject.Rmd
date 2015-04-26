@@ -5,15 +5,6 @@ date: "Sunday, April 26, 2015"
 output: html_document
 ---
 
----
-title: 'Practical Machine Learning Prediction Project'
-author: "Daniel Emaasit [GitHub](https://github.com/emaasit/MachineLearning)"
-output:
-  html_document:
-    keep_md: yes
-    toc: yes
----
-
 > **Background**
 
 > Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
@@ -38,7 +29,7 @@ Set the seed for reproducible results
 set.seed(42)
 ```
 
-# Review Data Variables
+# Select Candidate Variables
 
 Read the training and testing date from local csv files.  "NA", "#DIV/0!" and "" will all be treated as NA.
 
@@ -47,23 +38,100 @@ training <- read.csv('pml-training.csv', na.strings=c("NA","#DIV/0!",""))
 testing <- read.csv('pml-testing.csv', na.strings=c("NA","#DIV/0!",""))
 
 dim(training)
-str(training)
 ```
 
 There are 160 variables in the data set.
 
-First strip out those variables with zero or near zero variance.
+THe first seven columns are not useful for movement analysis so strip them out
+
+```{r}
+# X                       : int  1 2 3 4 5 6 7 8 9 10 ...
+# user_name               : Factor w/ 6 levels "adelmo","carlitos"...
+# raw_timestamp_part_1    : int  1323084231 1323084231 1323084231...
+# raw_timestamp_part_2    : int  788290 808298 820366 120339 ...
+# cvtd_timestamp          : Factor w/ 20 levels "02/12/2011 13:32",..
+# new_window              : Factor w/ 2 levels "no","yes"...
+# num_window         
+
+training <- training[,-c(1:7)]
+testing <- testing[,-c(1:7)]
+```
+
+Next strip out those variables with zero or near zero variance.
 
 ```{r}
 library("caret")
 nzv <- nearZeroVar(training, saveMetrics=TRUE)
-
 nzvList <- rownames(nzv)[nzv$nzv==TRUE]
-nzvList <- c("X",nzvList)
-trainingFocus <- training[!names(training) %in% nzvList]
-dim(trainingFocus)
-str(trainingFocus)
 
-D <- D[, varToInclude, with=FALSE]
+training   <- training  [!names(training) %in% nzvList]
+testing    <- testing   [!names(testing) %in% nzvList]
 ```
+
+Find columns with any NAs and ignore them
+
+```{r}
+
+colsWithNa <- sapply(training, function (x) any(is.na(x) | x == ""))
+focusCols <- names(colsWithNa)[!colsWithNa]
+focusCols <- focusCols[-53]
+    
+training   <- training  [, c("classe", focusCols)]
+testing    <- testing   [, c("problem_id", focusCols)]
+```
+
+names(training)
+names(testing)
+
+# Modeling
+
+Partition training data into training and validation partitions
+
+```{r}
+inTrain = createDataPartition(y=training$classe, p=0.65, list=FALSE)
+trainingPart   = training[inTrain,]
+validationPart = training[-inTrain,]
+```
+
+Train using Random Forest on the training partition of the training set
+
+```{r}
+library(randomForest)
+# rfModel = train(classe~., method="rf", data=trainingPart)
+
+saveRDS(rfModel, "rfModel.RDS")
+rfModel = readRDS("rfModel.RDS")
+rfModel
+```
+
+Confusion matrix shows 100% accuracy on the training partition
+
+Checking validation partition which was not used for training
+
+```{r}
+predValid <- predict(rfModel, validationPart)
+confusionMatrix(predValid, validationPart[, "classe"])
+```
+
+COnfusion matrix shows 99.34% on the validation partition. Error rate of 0.66%.
+
+Now take the course project testing set and predict using the trained model
+
+```{r}
+predTest <- predict(rfModel, testing)
+testing <- cbind(predTest , testing)
+
+pml_write_files = function(x){
+    n = length(x)
+    for(i in 1:n){
+        filename = paste0("problem_id_",i,".txt")
+        write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+    }
+}
+pml_write_files(testing[,1])
+```
+
+Results were all correct!
+
+
 
